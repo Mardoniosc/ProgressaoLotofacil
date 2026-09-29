@@ -32,10 +32,11 @@ jobs:
 
       - name: Definir base href
         id: base
-        # Repositório "usuario.github.io" é servido na raiz; os demais em /<repositorio>/.
+        # Domínio próprio (arquivo CNAME) ou repositório "usuario.github.io" são servidos na raiz;
+        # os demais em /<repositorio>/.
         run: |
           REPO="${{ github.event.repository.name }}"
-          if [[ "$REPO" == *.github.io ]]; then echo "href=/" >> "$GITHUB_OUTPUT"; else echo "href=/$REPO/" >> "$GITHUB_OUTPUT"; fi
+          if [[ -s CNAME || "$REPO" == *.github.io ]]; then echo "href=/" >> "$GITHUB_OUTPUT"; else echo "href=/$REPO/" >> "$GITHUB_OUTPUT"; fi
 
       - name: Build
         run: npx ng build --base-href "${{ steps.base.outputs.href }}"
@@ -46,6 +47,8 @@ jobs:
           # Fallback SPA: links diretos como /aposta abrem o app em vez de 404.
           cp index.html 404.html
           touch .nojekyll
+          # Mantém o domínio próprio configurado no Pages.
+          if [[ -s "$GITHUB_WORKSPACE/CNAME" ]]; then cp "$GITHUB_WORKSPACE/CNAME" .; fi
 
       - uses: actions/upload-pages-artifact@v3
         with:
