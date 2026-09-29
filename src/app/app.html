@@ -1,0 +1,72 @@
+@if (isOnboarding()) {
+  <router-outlet />
+} @else {
+  <div class="shell">
+    <aside class="sidebar" aria-label="Navegação principal">
+      <div class="brand">
+        <span class="logo" aria-hidden="true"><img src="icons/icon-96x96.png" alt="" width="36" height="36" /></span>
+        <div>
+          <strong>{{ state.preferences().appTitle }}</strong>
+          <small>Simulação e acompanhamento</small>
+        </div>
+      </div>
+      <nav>
+        @for (item of nav; track item.path) {
+          <a [routerLink]="item.path" routerLinkActive="active" class="side-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="item.icon" /></svg>
+            {{ item.label }}
+          </a>
+        }
+      </nav>
+      <div class="side-foot">
+        @if (pwa.canInstall()) {
+          <button class="btn primary block sm" type="button" (click)="pwa.install()">Instalar aplicativo</button>
+        }
+        <button class="btn ghost block sm" type="button" (click)="theme.toggle()">
+          {{ theme.effective() === 'dark' ? '☀️ Modo claro' : '🌙 Modo escuro' }}
+        </button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="brand">
+          <span class="logo" aria-hidden="true"><img src="icons/icon-96x96.png" alt="" width="30" height="30" /></span>
+          <strong>{{ state.preferences().appTitle }}</strong>
+        </div>
+        <div class="row">
+          @if (pwa.canInstall()) {
+            <button class="btn sm primary" type="button" (click)="pwa.install()">Instalar</button>
+          }
+          <button class="icon-btn" type="button" (click)="theme.toggle()"
+            [attr.aria-label]="theme.effective() === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'">
+            {{ theme.effective() === 'dark' ? '☀️' : '🌙' }}
+          </button>
+        </div>
+      </header>
+
+      @if (state.storageError(); as err) {
+        <div class="alert danger storage-alert" role="alert">{{ err }}</div>
+      }
+      @if (pwa.updateAvailable()) {
+        <div class="alert storage-alert row between" role="status">
+          <span>Nova versão disponível.</span>
+          <button class="btn sm primary" type="button" (click)="pwa.reload()">Atualizar</button>
+        </div>
+      }
+
+      <main>
+        <router-outlet />
+      </main>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Navegação">
+      @for (item of mobileNav; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active" class="bottom-link">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="item.icon" /></svg>
+          <span>{{ item.short }}</span>
+        </a>
+      }
+    </nav>
+  </div>
+}

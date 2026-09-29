@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Lotofácil Progressão</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Analisador de investimento, premiação e evolução das apostas da Lotofácil. Simulação 100% offline." />
+    <meta name="theme-color" content="#6d28d9" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Progressão" />
+    <link rel="icon" type="image/png" sizes="96x96" href="icons/icon-96x96.png" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <script>
+      // Aplica o último tema antes do Angular iniciar, evitando "flash" de tema claro.
+      try {
+        var t = localStorage.getItem('lp-theme');
+        if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+    <style>
+      /* Splash enquanto o app carrega */
+      .boot { position: fixed; inset: 0; display: grid; place-items: center; background: #f5f4f8; font-family: system-ui, sans-serif; color: #6d28d9; }
+      [data-theme='dark'] .boot { background: #0f0c17; color: #a78bfa; }
+      .boot img { width: 72px; height: 72px; border-radius: 18px; display: block; margin: 0 auto 12px; }
+    </style>
+  </head>
+  <body>
+    <app-root>
+      <div class="boot"><div><img src="icons/icon-192x192.png" alt="" /><strong>Lotofácil Progressão</strong></div></div>
+    </app-root>
+    <noscript>Ative o JavaScript para usar este aplicativo.</noscript>
+  </body>
+</html>

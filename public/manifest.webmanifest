@@ -1,0 +1,43 @@
+{
+  "id": "./",
+  "name": "Lotofácil Progressão",
+  "short_name": "Progressão",
+  "description": "Analisador de investimento, premiação e evolução das apostas. Simulação matemática 100% offline.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "./",
+  "start_url": "./dashboard",
+  "theme_color": "#6d28d9",
+  "background_color": "#f5f4f8",
+  "categories": ["finance", "utilities"],
+  "icons": [
+    { "src": "icons/icon-72x72.png", "sizes": "72x72", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-96x96.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-128x128.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-152x152.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-384x384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova aposta",
+      "short_name": "Aposta",
+      "description": "Informar os números e o valor da aposta",
+      "url": "./aposta",
+      "icons": [{ "src": "icons/shortcut-aposta-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Registrar rodada",
+      "short_name": "Registrar",
+      "description": "Adicionar uma rodada ao histórico",
+      "url": "./historico?novo=1",
+      "icons": [{ "src": "icons/shortcut-aposta-96x96.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ]
+}

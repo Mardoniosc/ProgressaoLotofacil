@@ -1,0 +1,152 @@
+@let s = summary();
+<div class="page stack">
+  <header class="page-head row between">
+    <div>
+      <h1>Histórico</h1>
+      <p>Rodadas realizadas e resultado real acumulado.</p>
+    </div>
+    @if (!draft()) {
+      <button class="btn primary" type="button" (click)="openNew()">+ Registrar rodada</button>
+    }
+  </header>
+
+  <section class="cards" aria-label="Resumo do histórico">
+    <div class="card stat"><span class="label">Total investido</span><span class="value">{{ s.totalInvested | brl }}</span></div>
+    <div class="card stat"><span class="label">Total recebido</span><span class="value">{{ s.totalReceived | brl }}</span></div>
+    <div class="card stat">
+      <span class="label">Resultado líquido</span>
+      <span class="value" [class]="s.net > 0 ? 'text-lucro' : s.net < 0 ? 'text-prejuizo' : ''">{{ s.net | brl }}</span>
+    </div>
+    <div class="card stat">
+      <span class="label">ROI real</span>
+      <span class="value" [class]="s.roi > 0 ? 'text-lucro' : s.roi < 0 ? 'text-prejuizo' : ''">{{ s.roi | pct }}</span>
+    </div>
+    <div class="card stat"><span class="label">Concursos realizados</span><span class="value">{{ s.count }}</span></div>
+    <div class="card stat">
+      <span class="label">Melhor / pior</span>
+      <span class="value">{{ s.bestHits ?? '—' }} / {{ s.worstHits ?? '—' }} <small class="muted">acertos</small></span>
+      @if (s.bestResult !== null) {
+        <span class="sub">Resultado: {{ s.bestResult | brl }} / {{ s.worstResult | brl }}</span>
+      }
+    </div>
+  </section>
+
+  @if (draft(); as d) {
+    <section class="card form-card" id="round-form">
+      <div class="card-head">
+        <h2>{{ d.isNew ? 'Registrar rodada' : 'Editar rodada ' + d.roundNumber }}</h2>
+        <button class="btn sm ghost" type="button" (click)="draft.set(null)">Cancelar</button>
+      </div>
+      <form class="stack" (submit)="$event.preventDefault(); save()">
+        <div class="fields cols-3">
+          <div class="field">
+            <label for="f-date">Data</label>
+            <input id="f-date" type="date" required [value]="d.date" (change)="patch({ date: $any($event.target).value })" />
+          </div>
+          <div class="field">
+            <label for="f-round">Rodada</label>
+            <input id="f-round" type="number" min="1" step="1" inputmode="numeric" required [value]="d.roundNumber"
+              (change)="patch({ roundNumber: intOrUndefined($any($event.target).value) ?? 1 })" />
+          </div>
+          <div class="field">
+            <label for="f-games">Quantidade de jogos</label>
+            <input id="f-games" type="number" min="1" step="1" inputmode="numeric" required [value]="d.games"
+              (change)="patch({ games: intOrUndefined($any($event.target).value) ?? 1 })" />
+          </div>
+          <div class="field">
+            <label for="f-bet">Valor da aposta</label>
+            <app-money-input inputId="f-bet" [value]="d.betValue" (valueChange)="patch({ betValue: $event })" />
+          </div>
+          <div class="field">
+            <label for="f-inv">Investimento</label>
+            <app-money-input inputId="f-inv" [value]="d.investment" (valueChange)="setInvestment($event)" />
+            <span class="hint">{{ d.autoInvestment ? 'Calculado: jogos × valor da aposta' : 'Valor informado manualmente' }}</span>
+          </div>
+          <div class="field">
+            <label for="f-hits">Acertos</label>
+            <select id="f-hits" (change)="patch({ hits: intOrUndefined($any($event.target).value) })">
+              <option value="" [selected]="d.hits === undefined || d.hits === null">Não informado</option>
+              @for (h of hitOptions; track h) {
+                <option [value]="h" [selected]="d.hits === h">{{ h }} acertos</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-prize">Prêmio recebido</label>
+            <app-money-input inputId="f-prize" [value]="d.prize ?? 0" (valueChange)="patch({ prize: $event })" />
+          </div>
+          <div class="field" style="grid-column: 1 / -1">
+            <label for="f-notes">Observação</label>
+            <textarea id="f-notes" maxlength="500" [value]="d.notes ?? ''" (change)="patch({ notes: $any($event.target).value })"></textarea>
+          </div>
+        </div>
+
+        <div>
+          <span class="small muted">Números</span>
+          <app-number-chips [numbers]="d.numbers" />
+          <details class="grid-toggle">
+            <summary>Editar números</summary>
+            <app-number-grid [selected]="d.numbers" (selectedChange)="patch({ numbers: $event })" [max]="state.bet().numbersPerGame" />
+          </details>
+        </div>
+
+        @if (draftResult(); as r) {
+          <div class="result-preview">
+            Resultado: <strong [class]="'text-' + r.kind">{{ r.result | brl }}</strong>
+            <span class="tag" [class]="'tag-' + r.kind">{{ kindLabel[r.kind] }}</span>
+          </div>
+        }
+
+        @if (d.isNew) {
+          <label class="check">
+            <input type="checkbox" [checked]="d.advance" (change)="patch({ advance: $any($event.target).checked })" />
+            Avançar a progressão para a próxima rodada após registrar
+          </label>
+        }
+
+        <div class="row end">
+          <button class="btn" type="button" (click)="draft.set(null)">Cancelar</button>
+          <button class="btn primary" type="submit">Salvar rodada</button>
+        </div>
+      </form>
+    </section>
+  }
+
+  @for (r of rounds(); track r.id) {
+    @let res = resultOf(r);
+    <article class="card round-card">
+      <div class="round-top">
+        <div>
+          <h3>Rodada {{ r.roundNumber }}</h3>
+          <span class="small muted">{{ r.date | dateBr }} · {{ r.games | jogos }} · {{ r.betValue | brl }} por jogo</span>
+        </div>
+        <span class="tag" [class]="'tag-' + res.kind">{{ kindLabel[res.kind] }}</span>
+      </div>
+      <div class="facts">
+        <div><span>Investimento</span><strong>{{ r.investment | brl }}</strong></div>
+        <div><span>Acertos</span><strong>{{ r.hits ?? '—' }}</strong></div>
+        <div><span>Prêmio</span><strong>{{ r.prize ?? 0 | brl }}</strong></div>
+        <div><span>Resultado</span><strong [class]="'text-' + res.kind">{{ res.result > 0 ? '+ ' : '' }}{{ res.result | brl }} ({{ res.roi | pct }})</strong></div>
+      </div>
+      @if (r.numbers.length) {
+        <app-number-chips [numbers]="r.numbers" />
+      }
+      @if (r.notes) {
+        <p class="small muted">{{ r.notes }}</p>
+      }
+      <div class="row end">
+        <button class="btn sm" type="button" (click)="edit(r)">Editar</button>
+        <button class="btn sm danger" type="button" (click)="remove(r)">Excluir</button>
+      </div>
+    </article>
+  } @empty {
+    @if (!draft()) {
+      <div class="card empty">
+        <p>Nenhuma rodada registrada ainda.</p>
+        <button class="btn primary" type="button" (click)="openNew()">Registrar primeira rodada</button>
+      </div>
+    }
+  }
+
+  <app-disclaimer />
+</div>
