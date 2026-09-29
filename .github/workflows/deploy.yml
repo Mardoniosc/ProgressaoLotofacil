@@ -1,0 +1,62 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Testes
+        run: npm test
+
+      - name: Definir base href
+        id: base
+        # Repositório "usuario.github.io" é servido na raiz; os demais em /<repositorio>/.
+        run: |
+          REPO="${{ github.event.repository.name }}"
+          if [[ "$REPO" == *.github.io ]]; then echo "href=/" >> "$GITHUB_OUTPUT"; else echo "href=/$REPO/" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Build
+        run: npx ng build --base-href "${{ steps.base.outputs.href }}"
+
+      - name: Preparar para o Pages
+        run: |
+          cd dist/lotofacil-progressao/browser
+          # Fallback SPA: links diretos como /aposta abrem o app em vez de 404.
+          cp index.html 404.html
+          touch .nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/lotofacil-progressao/browser
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -99,3 +99,13 @@ Manifesto com ícones `any` e `maskable`, `theme_color`, `background_color` (spl
 todos os arquivos e avisa quando há nova versão.
 
 Em produção, o app precisa ser servido via HTTPS (ou localhost) para o service worker funcionar.
+
+## Deploy no GitHub Pages
+
+O workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) roda a cada push na
+branch `main` (ou manualmente em *Actions → Deploy GitHub Pages → Run workflow*): instala as
+dependências, executa os testes, gera o build com o `base-href` correto (`/<repositorio>/`, ou `/`
+para repositórios `usuario.github.io`), cria o `404.html` de fallback e publica.
+
+Configuração única no GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+O endereço fica `https://<usuario>.github.io/<repositorio>/`.
