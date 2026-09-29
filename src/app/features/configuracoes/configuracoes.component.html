@@ -1,0 +1,155 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Configurações</h1>
+      <p class="sub">Estratégia, banca, aparência e dados locais.</p>
+    </div>
+  </header>
+
+  @if (message(); as m) {
+    <div class="alert" [class.ok]="!m.error" [class.er]="m.error" role="status">
+      <app-icon class="a-icon" [name]="m.error ? 'x-circle' : 'check-circle'" [size]="20" />
+      <p style="margin: 0">{{ m.text }}</p>
+    </div>
+  }
+
+  <div class="layout">
+    <div class="col">
+      <span class="overline">Estratégia</span>
+      <div class="list">
+        <button type="button" class="list-row" (click)="ui.betSheetOpen.set(true)">
+          <span class="lr-label">Valor da aposta</span><span class="lr-value">{{ state.bet().betValue | brl }}</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+        <button type="button" class="list-row" (click)="edit('multiplier')">
+          <span class="lr-label">Multiplicador</span><span class="lr-value">{{ fmtMultiplier() }}</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+        <button type="button" class="list-row" (click)="edit('initialGames')">
+          <span class="lr-label">Número inicial de jogos</span><span class="lr-value">{{ state.progression().initialGames }}</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+        <button type="button" class="list-row" (click)="edit('rounds')">
+          <span class="lr-label">Número de rodadas</span><span class="lr-value">{{ state.progression().rounds }}</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+      </div>
+
+      <span class="overline">Banca</span>
+      <div class="list">
+        <button type="button" class="list-row" (click)="edit('initialBankroll')">
+          <span class="lr-label">Banca inicial</span><span class="lr-value">{{ state.bankroll().initialBankroll | brl }}</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+        <button type="button" class="list-row" (click)="edit('maxRoundInvestment')">
+          <span class="lr-label">Limite máximo por rodada</span>
+          <span class="lr-value" [class.faint]="!state.bankroll().maxRoundInvestment">{{ state.bankroll().maxRoundInvestment ? (state.bankroll().maxRoundInvestment | brl) : 'Desativado' }}</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+      </div>
+
+      <span class="overline">Aparência</span>
+      <div class="list theme">
+        <div class="segmented block" role="radiogroup" aria-label="Tema">
+          @for (t of themes; track t.value) {
+            <button type="button" role="radio" [class.active]="theme.preference() === t.value" [attr.aria-checked]="theme.preference() === t.value"
+              (click)="setTheme(t.value)"><app-icon [name]="t.icon" [size]="17" /> {{ t.label }}</button>
+          }
+        </div>
+      </div>
+
+      <span class="overline">Personalização</span>
+      <div class="list">
+        <button type="button" class="list-row" (click)="edit('appTitle')">
+          <span class="lr-label">Nome do aplicativo</span><span class="lr-value faint">{{ state.preferences().appTitle }}</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+        <a class="list-row" routerLink="/premiacoes">
+          <span class="lr-label">Nome e valor das faixas</span><span class="lr-value faint">5 faixas</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </a>
+      </div>
+    </div>
+
+    <div class="col">
+      <span class="overline">Dados</span>
+      <div class="list">
+        <button type="button" class="list-row" (click)="exportData()">
+          <app-icon class="lead" name="upload" [size]="20" /><span class="lr-label">Exportar dados</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+        <label class="list-row">
+          <app-icon class="lead" name="download" [size]="20" /><span class="lr-label">Importar dados</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+          <input type="file" accept="application/json,.json" hidden (change)="importFile($event)" />
+        </label>
+        <button type="button" class="list-row danger" (click)="resetAll()">
+          <app-icon class="lead" name="trash" [size]="20" /><span class="lr-label">Apagar dados</span>
+        </button>
+      </div>
+      <p class="status">
+        {{ state.rounds().length }} rodada(s) no histórico · Service worker: {{ pwa.serviceWorkerEnabled ? 'ativo (funciona offline)' : 'inativo neste modo' }}
+        @if (storageInfo(); as s) { · Armazenamento: {{ s }} }
+      </p>
+
+      <span class="overline">Aplicativo</span>
+      <div class="list">
+        @if (pwa.canInstall()) {
+          <button type="button" class="list-row" (click)="pwa.install()">
+            <app-icon class="lead" name="install" [size]="20" /><span class="lr-label">Instalar aplicativo</span>
+            <app-icon class="chev" name="chevron-right" [size]="18" />
+          </button>
+        }
+        <button type="button" class="list-row" (click)="restoreInitial()">
+          <app-icon class="lead" name="refresh" [size]="20" /><span class="lr-label">Restaurar configuração inicial</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+        <button type="button" class="list-row" (click)="rerunOnboarding()">
+          <app-icon class="lead" name="book" [size]="20" /><span class="lr-label">Refazer assistente inicial</span>
+          <app-icon class="chev" name="chevron-right" [size]="18" />
+        </button>
+      </div>
+
+      <button type="button" class="explain" (click)="ui.infoOpen.set(true)">
+        Entenda os números <span>Abrir <app-icon name="chevron-right" [size]="18" /></span>
+      </button>
+    </div>
+  </div>
+
+  <app-disclaimer [full]="true" />
+</div>
+
+<app-sheet [heading]="editing()?.title ?? ''" [open]="!!editing()" (closed)="editing.set(null)">
+  @if (editing(); as e) {
+    <div class="field">
+      @switch (e.kind) {
+        @case ('money') {
+          <app-money-input size="lg" [ariaLabel]="e.title" [value]="+e.value" (valueChange)="setDraft($event)" />
+        }
+        @case ('text') {
+          <input type="text" maxlength="40" [attr.aria-label]="e.title" [value]="e.value" (input)="setDraft($any($event.target).value)" />
+        }
+        @default {
+          <div class="stepper">
+            <button type="button" aria-label="Diminuir" (click)="stepDraft(-1)"><app-icon name="minus" [size]="18" /></button>
+            <input type="number" [min]="e.min ?? 0" [max]="e.max ?? null" [step]="e.step ?? 1" [attr.aria-label]="e.title"
+              [attr.inputmode]="e.kind === 'int' ? 'numeric' : 'decimal'" [value]="e.value" (input)="setDraft(+$any($event.target).value)" />
+            <button type="button" aria-label="Aumentar" (click)="stepDraft(1)"><app-icon name="plus" [size]="18" /></button>
+          </div>
+        }
+      }
+      @if (e.key === 'multiplier') {
+        <div class="chips" style="margin-top: 6px">
+          @for (m of [1.5, 2, 3]; track m) {
+            <button type="button" class="chip" [class.active]="e.value === m" (click)="setDraft(m)">{{ m.toString().replace('.', ',') }}x</button>
+          }
+        </div>
+      }
+      @if (e.hint) { <span class="hint">{{ e.hint }}</span> }
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn outline" (click)="editing.set(null)">Cancelar</button>
+      <button type="button" class="btn" (click)="saveEdit()">Salvar</button>
+    </div>
+  }
+</app-sheet>

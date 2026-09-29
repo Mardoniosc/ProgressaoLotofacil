@@ -45,7 +45,7 @@ describe('NumberGridComponent', () => {
     expect(grid.complete()).toBe(true);
     expect(ball(16).disabled).toBe(true);
     expect(ball(1).disabled).toBe(false);
-    expect(el().textContent).toContain('Jogo completo');
+    expect(el().textContent).toContain('Completo');
     expect(el().textContent).toContain('15 / 15');
   });
 

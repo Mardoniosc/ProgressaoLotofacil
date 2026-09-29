@@ -1,136 +1,116 @@
 @let cur = current();
 @let nxt = next();
-@let sc = scenario();
-<div class="page stack">
-  <header class="page-head row between">
+<div class="page">
+  <!-- Cabeçalho mobile -->
+  <header class="m-head">
+    <app-logo [size]="40" />
+    <div>
+      <h1>{{ state.preferences().appTitle }}</h1>
+      <p>Veja rapidamente como está sua estratégia.</p>
+    </div>
+  </header>
+  <!-- Cabeçalho desktop -->
+  <header class="page-head d-head">
     <div>
       <h1>Dashboard</h1>
-      <p>Analisador de investimento, premiação e evolução das apostas</p>
+      <p class="sub">Veja rapidamente como está sua estratégia.</p>
     </div>
-    <div class="round-nav">
-      <button class="btn sm" type="button" (click)="state.previousRound()" [disabled]="cur.round <= 1" aria-label="Rodada anterior">‹</button>
-      <span class="round-pill">Rodada {{ cur.round }}</span>
-      <button class="btn sm" type="button" (click)="state.advanceRound()" aria-label="Avançar rodada">›</button>
+    <div class="actions">
+      <button type="button" class="btn outline" (click)="ui.betSheetOpen.set(true)">Editar aposta</button>
+      <a class="btn" routerLink="/historico" [queryParams]="{ novo: 1 }"><app-icon name="plus" [size]="18" [stroke]="2.6" /> Registrar resultado</a>
     </div>
   </header>
 
-  <!-- Cards principais -->
-  <section class="cards" aria-label="Resumo da rodada atual">
+  <!-- Stats -->
+  <section class="grid-stats" aria-label="Resumo da rodada atual">
     <div class="card stat">
-      <span class="label">Valor da aposta</span>
-      <span class="value">{{ state.bet().betValue | brl }}</span>
-      <a class="sub" routerLink="/aposta">Alterar</a>
+      <div class="stat-top">
+        <span class="label">Valor da aposta</span>
+        <button type="button" class="edit" (click)="ui.betSheetOpen.set(true)">Editar</button>
+      </div>
+      <span class="value"><app-amount [value]="state.bet().betValue" /></span>
+      <span class="hint">Valor atual por jogo</span>
     </div>
     <div class="card stat">
-      <span class="label">Jogos atuais</span>
-      <span class="value">{{ cur.games | jogos }}</span>
-      <span class="sub">Rodada {{ cur.round }} · fator {{ state.progression().multiplier }}x</span>
+      <div class="stat-top"><span class="label">Jogos atuais</span></div>
+      <span class="value">{{ cur.games | num }}</span>
+      <span class="hint">Próxima etapa: <b>{{ nxt.games | jogos }}</b></span>
     </div>
     <div class="card stat">
-      <span class="label">Investimento atual</span>
-      <span class="value">{{ cur.investment | brl }}</span>
-      <span class="sub">{{ cur.games }} × {{ state.bet().betValue | brl }}</span>
+      <div class="stat-top"><span class="label">Investimento atual</span></div>
+      <span class="value"><app-amount [value]="cur.investment" /></span>
+      <span class="hint">Nesta rodada</span>
     </div>
     <div class="card stat">
-      <span class="label">Próxima rodada</span>
-      <span class="value">{{ nxt.games | jogos }}</span>
-      <span class="sub">{{ nxt.investment | brl }}</span>
-    </div>
-    <div class="card stat">
-      <span class="label">Investimento acumulado</span>
-      <span class="value">{{ cur.accumulated | brl }}</span>
-      <span class="sub">Rodadas 1 a {{ cur.round }}</span>
-    </div>
-    <div class="card stat roi-card">
-      <span class="label">ROI potencial</span>
-      <span class="value" [class]="'text-' + sc.kind">ROI {{ sc.roi | pct }}</span>
-      <span class="sub">{{ state.tierLabel(sc.tier) }} · {{ basisLabel() }}</span>
+      <div class="stat-top"><span class="label">Investimento acumulado</span></div>
+      <span class="value"><app-amount [value]="cur.accumulated" /></span>
+      <span class="hint">Desde o início</span>
     </div>
   </section>
 
-  <!-- Destaques -->
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <h2>Cenário selecionado</h2>
-        <p>Retorno hipotético na rodada {{ cur.round }}</p>
-      </div>
-      <app-tier-selector [compact]="true" [value]="state.selectedTier()" (valueChange)="selectTier($event)" />
-    </div>
-    <div class="cards four">
-      <div class="card stat highlight blue">
-        <span class="label"><span class="icon">🔵</span> Investimento</span>
-        <span class="value">{{ cur.investment | brl }}</span>
-        <span class="sub">Valor colocado nesta rodada</span>
-      </div>
-      <div class="card stat highlight green">
-        <span class="label"><span class="icon">🟢</span> Retorno</span>
-        <span class="value">{{ sc.prize | brl }}</span>
-        <span class="sub">Com {{ state.tierLabel(sc.tier) }}</span>
-      </div>
-      <div class="card stat highlight yellow">
-        <span class="label"><span class="icon">🟡</span> Ponto de equilíbrio</span>
-        <span class="value">{{ state.breakEven().amount | brl }}</span>
-        <span class="sub">Retorno para recuperar o investimento {{ basisLabel() }}</span>
-      </div>
-      <div class="card stat highlight red">
-        <span class="label"><span class="icon">🔴</span> Exposição</span>
-        <span class="value">{{ cur.accumulated | brl }}</span>
-        <span class="sub">Total investido acumulado</span>
-      </div>
-    </div>
-    <p class="small muted" style="margin-top: 12px">
-      Resultado: <strong [class]="'text-' + sc.kind">{{ sc.result | brl }}</strong>
-      <span class="tag" [class]="'tag-' + sc.kind">{{ sc.kind === 'lucro' ? 'LUCRO' : sc.kind === 'prejuizo' ? 'PREJUÍZO' : 'EMPATE' }}</span>
-    </p>
-  </section>
+  <!-- Banca + próxima rodada -->
+  <div class="top-grid">
+    <section class="card"><app-bankroll-card [wide]="true" /></section>
+    <app-next-round-card />
+  </div>
 
-  <app-growth-alert />
+  @if (state.nextRoundOverLimit() || state.nextRoundOverBankroll()) {
+    <app-growth-alert />
+  }
 
-  <div class="two-col">
+  <!-- Gráfico + cenário -->
+  <div class="grid-2 wide-left">
     <section class="card">
       <div class="card-head">
-        <h2>Minha banca</h2>
-        <a class="btn sm ghost" routerLink="/configuracoes">Ajustar</a>
+        <h3>Investimento por rodada</h3>
+        <div class="segmented sm" role="tablist">
+          <button type="button" role="tab" [class.active]="chartMode() === 'round'" [attr.aria-selected]="chartMode() === 'round'" (click)="chartMode.set('round')">Por rodada</button>
+          <button type="button" role="tab" [class.active]="chartMode() === 'accumulated'" [attr.aria-selected]="chartMode() === 'accumulated'" (click)="chartMode.set('accumulated')">Acumulado</button>
+        </div>
       </div>
-      <app-bankroll-bar />
+      <app-chart [labels]="chartLabels()" [series]="chartSeries()" [highlight]="cur.round - 1" ariaLabel="Investimento por rodada" />
+      <p class="foot">
+        Cada rodada multiplica a anterior por {{ state.progression().multiplier }}: a última rodada da tabela custa
+        <b>{{ growthFactor() }}×</b> a rodada 1.
+      </p>
     </section>
 
     <section class="card">
       <div class="card-head">
-        <h2>Minha aposta atual</h2>
+        <h3>Se eu acertar…</h3>
+        <a class="link" routerLink="/premiacoes">Premiações</a>
+      </div>
+      <app-scenario-simulator />
+    </section>
+  </div>
+
+  <div class="grid-2">
+    <section class="card">
+      <div class="card-head">
+        <h3>Minha aposta atual</h3>
         @if (betComplete()) {
-          <span class="badge ok">Jogo completo</span>
+          <span class="badge ok">✓ Completo</span>
         } @else {
-          <a class="btn sm primary" routerLink="/aposta">Completar</a>
+          <a class="btn xs secondary" routerLink="/aposta">Completar</a>
         }
       </div>
       <app-number-chips [numbers]="state.bet().selectedNumbers" />
     </section>
+
+    <section class="card">
+      <div class="card-head"><h3>Ações rápidas</h3></div>
+      <div class="row">
+        <a class="btn sm" routerLink="/historico" [queryParams]="{ novo: 1 }"><app-icon name="plus" [size]="16" [stroke]="2.6" /> Registrar resultado</a>
+        <a class="btn sm outline" routerLink="/progressao">Ver progressão</a>
+        <button class="btn sm ghost" type="button" (click)="ui.infoOpen.set(true)">Entenda os números</button>
+        <button class="btn sm ghost" type="button" (click)="resetProgression()">Reiniciar progressão</button>
+      </div>
+    </section>
   </div>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>E se eu acertar...</h2>
-    </div>
-    <app-scenario-simulator />
-  </section>
-
-  <section class="card">
-    <div class="card-head">
-      <h2>Ações rápidas</h2>
-    </div>
-    <div class="row">
-      <a class="btn primary" routerLink="/historico" [queryParams]="{ novo: 1 }">Registrar rodada</a>
-      <a class="btn" routerLink="/progressao">Ver progressão</a>
-      <a class="btn" routerLink="/premiacoes">Premiações</a>
-      <button class="btn ghost" type="button" (click)="resetProgression()">Reiniciar progressão</button>
-    </div>
-  </section>
-
-  <section class="card">
-    <app-educational-info />
-  </section>
+  @if (!state.nextRoundOverLimit() && !state.nextRoundOverBankroll()) {
+    <app-growth-alert />
+  }
 
   <app-disclaimer [full]="true" />
 </div>

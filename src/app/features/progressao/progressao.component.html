@@ -1,0 +1,121 @@
+@let p = prog();
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Progressão</h1>
+      <p class="sub">Visualize como o investimento evolui a cada rodada.</p>
+    </div>
+    <div class="card params">
+      <div><span>Valor por jogo</span><b><app-amount [value]="state.bet().betValue" /></b></div>
+      <div><span>Multiplicador</span><b>{{ p.multiplier.toString().replace('.', ',') }}x</b></div>
+      <div><span>Rodadas</span><b>{{ p.rounds }}</b></div>
+    </div>
+  </header>
+
+  <details class="card adjust">
+    <summary><h3>Ajustar progressão</h3><app-icon name="chevron-down" [size]="20" /></summary>
+    <div class="fields md-2">
+      <div class="field">
+        <span class="label">Fator de crescimento</span>
+        <div class="chips">
+          @for (m of presets; track m) {
+            <button type="button" class="chip" [class.active]="!customMode() && m === p.multiplier" (click)="setMultiplier(m)">
+              {{ m.toString().replace('.', ',') }}x
+            </button>
+          }
+          <button type="button" class="chip" [class.active]="customMode()" (click)="customOpen.set(true)">Personalizado</button>
+        </div>
+        @if (customMode() || customOpen()) {
+          <div class="stepper">
+            <button type="button" aria-label="Diminuir multiplicador" (click)="stepMultiplier(-1)"><app-icon name="minus" [size]="18" /></button>
+            <input type="number" min="1" max="10" step="0.1" inputmode="decimal" aria-label="Multiplicador personalizado"
+              [value]="p.multiplier" (change)="setMultiplier(+$any($event.target).value)" />
+            <button type="button" aria-label="Aumentar multiplicador" (click)="stepMultiplier(1)"><app-icon name="plus" [size]="18" /></button>
+          </div>
+        }
+        <span class="hint">Jogos da rodada = jogos iniciais × fator^(rodada − 1), arredondado para cima.</span>
+      </div>
+      <div class="fields cols-2">
+        <div class="field">
+          <span class="label">Jogos iniciais</span>
+          <div class="stepper">
+            <button type="button" aria-label="Diminuir" (click)="setInt('initialGames', p.initialGames - 1, 1, 10000)"><app-icon name="minus" [size]="18" /></button>
+            <input type="number" min="1" max="10000" inputmode="numeric" aria-label="Jogos iniciais" [value]="p.initialGames"
+              (change)="setInt('initialGames', +$any($event.target).value, 1, 10000)" />
+            <button type="button" aria-label="Aumentar" (click)="setInt('initialGames', p.initialGames + 1, 1, 10000)"><app-icon name="plus" [size]="18" /></button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">Rodadas exibidas</span>
+          <div class="stepper">
+            <button type="button" aria-label="Diminuir" (click)="setInt('rounds', p.rounds - 1, 1, maxRounds)"><app-icon name="minus" [size]="18" /></button>
+            <input type="number" min="1" [max]="maxRounds" inputmode="numeric" aria-label="Rodadas exibidas" [value]="p.rounds"
+              (change)="setInt('rounds', +$any($event.target).value, 1, maxRounds)" />
+            <button type="button" aria-label="Aumentar" (click)="setInt('rounds', p.rounds + 1, 1, maxRounds)"><app-icon name="plus" [size]="18" /></button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="currentRound">Rodada atual</label>
+          <select id="currentRound" (change)="state.goToRound(+$any($event.target).value)">
+            @for (r of state.progressionRows(); track r.round) {
+              <option [value]="r.round" [selected]="r.round === p.currentRound">Rodada {{ r.round }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <span class="label">Lucro/ROI sobre</span>
+          <div class="segmented block">
+            <button type="button" [class.active]="p.resultBasis === 'accumulated'" (click)="setBasis('accumulated')">Acumulado</button>
+            <button type="button" [class.active]="p.resultBasis === 'round'" (click)="setBasis('round')">Rodada</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <div class="grid-2 wide-left">
+    <section class="card">
+      <div class="card-head"><h3>Jogos por rodada</h3><span class="link">{{ multiplierText() }}</span></div>
+      <app-jogos-por-rodada />
+    </section>
+    <section class="card">
+      <div class="card-head"><h3>Quanto estou arriscando?</h3></div>
+      <div class="risk">
+        <div><span>Próxima rodada</span><b><app-amount [value]="state.nextRow().investment" /></b></div>
+        <div><span>Acumulado</span><b><app-amount [value]="state.nextRow().accumulated" /></b></div>
+      </div>
+      @if (state.nextRoundOverLimit() || state.nextRoundOverBankroll()) {
+        <app-growth-alert />
+      } @else {
+        <div class="alert wn">
+          <app-icon class="a-icon" name="alert" [size]="20" />
+          <p style="margin: 0">A próxima rodada aumenta o investimento em <b>{{ nextIncrease() }}%</b> ({{ state.nextRow().games | num }} jogos · {{ state.nextRow().investment | brl }}).</p>
+        </div>
+      }
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h3>Linha do tempo</h3><a class="link" routerLink="/historico">Histórico</a></div>
+    <app-linha-do-tempo />
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h3>Tabela</h3>
+        <span class="caption">Resultado e ROI para a faixa selecionada <span class="swipe">· deslize →</span></span>
+      </div>
+      <app-tier-selector [showPrize]="false" [value]="tier()" (valueChange)="tier.set($event)" />
+    </div>
+    <app-progressao-table [rows]="state.progressionRows()" [tier]="tier()" [basis]="p.resultBasis" [currentRound]="p.currentRound" />
+  </section>
+
+  <app-progressao-chart [rows]="state.progressionRows()" />
+
+  <div class="row">
+    <a class="btn outline sm" routerLink="/premiacoes"><app-icon name="trophy" [size]="18" /> Configurar premiações</a>
+  </div>
+
+  <app-disclaimer [full]="true" />
+</div>

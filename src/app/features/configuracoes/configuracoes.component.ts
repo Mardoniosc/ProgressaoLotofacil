@@ -3,112 +3,64 @@ import { Router, RouterLink } from '@angular/router';
 import { AppStateService } from '../../core/services/app-state.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { PwaService } from '../../core/services/pwa.service';
+import { UiService } from '../../core/services/ui.service';
 import { BackupValidationError } from '../../core/storage/backup-validation';
+import { MAX_PROGRESSION_ROUNDS } from '../../core/models/defaults';
 import { ThemePreference } from '../../core/models/models';
+import { BrlPipe } from '../../shared/pipes/format.pipes';
 import { MoneyInputComponent } from '../../shared/components/money-input.component';
 import { DisclaimerComponent } from '../../shared/components/disclaimer.component';
-import { BankrollBarComponent } from '../../shared/components/widgets';
+import { IconComponent } from '../../shared/components/icon.component';
+import { SheetComponent } from '../../shared/components/sheet.component';
 
 export const BACKUP_FILENAME = 'lotofacil-progressao-backup.json';
+
+type EditKey = 'multiplier' | 'initialGames' | 'rounds' | 'initialBankroll' | 'maxRoundInvestment' | 'appTitle';
+
+interface EditState {
+  key: EditKey;
+  title: string;
+  kind: 'money' | 'int' | 'decimal' | 'text';
+  value: number | string;
+  hint?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}
 
 @Component({
   selector: 'app-configuracoes',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MoneyInputComponent, DisclaimerComponent, BankrollBarComponent],
-  template: `
-    <div class="page stack">
-      <header class="page-head">
-        <h1>Configurações</h1>
-        <p>Preferências, banca e armazenamento local.</p>
-      </header>
-
-      <section class="card">
-        <div class="card-head"><h2>Minha banca</h2></div>
-        <div class="fields cols-2">
-          <div class="field">
-            <label for="bankroll">Banca disponível</label>
-            <app-money-input inputId="bankroll" [value]="state.bankroll().initialBankroll"
-              (valueChange)="state.update('bankroll', { initialBankroll: $event })" />
-          </div>
-          <div class="field">
-            <label for="maxRound">Limite máximo por rodada</label>
-            <app-money-input inputId="maxRound" [value]="state.bankroll().maxRoundInvestment ?? 0"
-              (valueChange)="state.update('bankroll', { maxRoundInvestment: $event })" />
-            <span class="hint">Use 0 para desativar o alerta de limite.</span>
-          </div>
-        </div>
-        <div style="margin-top: 16px"><app-bankroll-bar /></div>
-      </section>
-
-      <section class="card">
-        <div class="card-head"><h2>Aparência</h2></div>
-        <div class="chips" role="radiogroup" aria-label="Tema">
-          @for (t of themes; track t.value) {
-            <button type="button" class="chip" role="radio" [class.active]="theme.preference() === t.value"
-              [attr.aria-checked]="theme.preference() === t.value" (click)="setTheme(t.value)">{{ t.label }}</button>
-          }
-        </div>
-        <p class="small muted" style="margin-top: 10px">
-          Nomes das faixas e título do app podem ser alterados em <a routerLink="/premiacoes">Premiações</a>.
-        </p>
-      </section>
-
-      <section class="card">
-        <div class="card-head"><h2>Premiações e progressão</h2></div>
-        <div class="row">
-          <a class="btn" routerLink="/premiacoes">Configurar faixas</a>
-          <a class="btn" routerLink="/progressao">Configurar progressão</a>
-          <button class="btn" type="button" (click)="restoreInitial()">Restaurar configuração inicial</button>
-          <button class="btn ghost" type="button" (click)="rerunOnboarding()">Refazer assistente inicial</button>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-head">
-          <div>
-            <h2>Dados locais</h2>
-            <p>Tudo fica salvo apenas neste navegador (IndexedDB). Nenhum dado é enviado para servidores.</p>
-          </div>
-        </div>
-        <div class="row">
-          <button class="btn primary" type="button" (click)="exportData()">Exportar dados (JSON)</button>
-          <label class="btn">
-            Importar dados
-            <input type="file" accept="application/json,.json" hidden (change)="importFile($event)" />
-          </label>
-        </div>
-        @if (message(); as m) {
-          <p class="small" [class.text-danger]="m.error" [class.text-lucro]="!m.error" role="status" style="margin-top: 10px">{{ m.text }}</p>
-        }
-        <p class="small muted" style="margin-top: 10px">
-          {{ state.rounds().length }} rodada(s) no histórico ·
-          Service worker: {{ pwa.serviceWorkerEnabled ? 'ativo (funciona offline)' : 'inativo neste modo' }}
-          @if (storageInfo(); as s) { · Armazenamento: {{ s }} }
-        </p>
-      </section>
-
-      <section class="card" style="border-color: var(--danger)">
-        <div class="card-head"><h2 class="text-danger">Zona de perigo</h2></div>
-        <p class="small muted">Essa ação apagará suas apostas, configurações e histórico localmente.</p>
-        <button class="btn danger" type="button" (click)="resetAll()">Apagar todos os dados</button>
-      </section>
-
-      <app-disclaimer [full]="true" />
-    </div>
+  imports: [RouterLink, BrlPipe, MoneyInputComponent, DisclaimerComponent, IconComponent, SheetComponent],
+  templateUrl: './configuracoes.component.html',
+  styles: `
+    .layout { display: grid; gap: 8px; align-items: start; }
+    @media (min-width: 1024px) { .layout { grid-template-columns: 1fr 1fr; gap: 24px; } }
+    .col { display: flex; flex-direction: column; gap: 8px; }
+    .col .overline { margin-top: 12px; padding-left: 4px; }
+    .list-row app-icon.lead { color: var(--tx2); }
+    .list-row.danger app-icon.lead { color: var(--er); }
+    .theme { padding: 6px; }
+    .explain { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 56px; padding: 0 16px; margin-top: 12px;
+      border: 1.5px dashed var(--bd); border-radius: var(--r-lg); background: transparent; font: inherit; font-size: 15px; font-weight: 700; color: var(--tx); cursor: pointer; }
+    .explain span { color: var(--pri); display: inline-flex; align-items: center; gap: 2px; }
+    .status { font-size: 12.5px; color: var(--tx3); font-weight: 600; padding: 4px; }
   `,
 })
 export class ConfiguracoesComponent {
   protected readonly state = inject(AppStateService);
   protected readonly theme = inject(ThemeService);
   protected readonly pwa = inject(PwaService);
+  protected readonly ui = inject(UiService);
   private readonly router = inject(Router);
 
   protected readonly message = signal<{ text: string; error: boolean } | null>(null);
   protected readonly storageInfo = signal<string | null>(null);
-  protected readonly themes: { value: ThemePreference; label: string }[] = [
-    { value: 'system', label: 'Sistema' },
-    { value: 'light', label: '☀️ Claro' },
-    { value: 'dark', label: '🌙 Escuro' },
+  protected readonly editing = signal<EditState | null>(null);
+  protected readonly themes: { value: ThemePreference; label: string; icon: string }[] = [
+    { value: 'light', label: 'Light', icon: 'sun' },
+    { value: 'dark', label: 'Dark', icon: 'moon' },
+    { value: 'system', label: 'Sistema', icon: 'monitor' },
   ];
 
   constructor() {
@@ -117,6 +69,66 @@ export class ConfiguracoesComponent {
     storage?.persist?.().then((persisted) =>
       this.storageInfo.set(persisted ? 'persistente' : 'padrão do navegador'),
     ).catch(() => undefined);
+  }
+
+  protected fmtMultiplier(): string {
+    return `${this.state.progression().multiplier.toString().replace('.', ',')}x`;
+  }
+
+  protected edit(key: EditKey): void {
+    const p = this.state.progression();
+    const b = this.state.bankroll();
+    const map: Record<EditKey, EditState> = {
+      multiplier: { key, title: 'Multiplicador', kind: 'decimal', value: p.multiplier, min: 1, max: 10, step: 0.1, hint: 'Fator aplicado à quantidade de jogos a cada rodada (padrão 2x).' },
+      initialGames: { key, title: 'Número inicial de jogos', kind: 'int', value: p.initialGames, min: 1, max: 10000, step: 1 },
+      rounds: { key, title: 'Número de rodadas', kind: 'int', value: p.rounds, min: 1, max: MAX_PROGRESSION_ROUNDS, step: 1, hint: `Quantidade de rodadas exibidas na tabela (até ${MAX_PROGRESSION_ROUNDS}).` },
+      initialBankroll: { key, title: 'Banca inicial', kind: 'money', value: b.initialBankroll },
+      maxRoundInvestment: { key, title: 'Limite máximo por rodada', kind: 'money', value: b.maxRoundInvestment ?? 0, hint: 'Use 0 para desativar o alerta de limite.' },
+      appTitle: { key, title: 'Nome do aplicativo', kind: 'text', value: this.state.preferences().appTitle, hint: 'Ex.: "Minha estratégia" ou "Progressão Lotofácil".' },
+    };
+    this.editing.set(map[key]);
+  }
+
+  protected setDraft(value: number | string): void {
+    this.editing.update((e) => (e ? { ...e, value } : e));
+  }
+
+  protected stepDraft(dir: 1 | -1): void {
+    const e = this.editing();
+    if (!e || typeof e.value !== 'number') return;
+    const next = Math.round((e.value + dir * (e.step ?? 1)) * 100) / 100;
+    this.setDraft(Math.min(e.max ?? Infinity, Math.max(e.min ?? 0, next)));
+  }
+
+  protected saveEdit(): void {
+    const e = this.editing();
+    if (!e) return;
+    const num = typeof e.value === 'number' ? e.value : Number(e.value);
+    const clamp = (n: number) => Math.min(e.max ?? Infinity, Math.max(e.min ?? 0, n));
+    switch (e.key) {
+      case 'multiplier':
+        if (Number.isFinite(num)) this.state.update('progression', { multiplier: clamp(Math.round(num * 100) / 100) });
+        break;
+      case 'initialGames':
+        if (Number.isFinite(num)) this.state.update('progression', { initialGames: clamp(Math.round(num)) });
+        break;
+      case 'rounds': {
+        if (!Number.isFinite(num)) break;
+        const rounds = clamp(Math.round(num));
+        this.state.update('progression', { rounds, currentRound: Math.min(this.state.progression().currentRound, rounds) });
+        break;
+      }
+      case 'initialBankroll':
+        this.state.update('bankroll', { initialBankroll: Math.max(0, num) });
+        break;
+      case 'maxRoundInvestment':
+        this.state.update('bankroll', { maxRoundInvestment: Math.max(0, num) });
+        break;
+      case 'appTitle':
+        this.state.update('preferences', { appTitle: String(e.value).trim() || 'Lotofácil Progressão' });
+        break;
+    }
+    this.editing.set(null);
   }
 
   protected setTheme(value: ThemePreference): void {
@@ -142,7 +154,14 @@ export class ConfiguracoesComponent {
     if (!file) return;
     try {
       const json = JSON.parse(await file.text());
-      if (!confirm('A importação substituirá os dados atuais. Deseja continuar?')) return;
+      const ok = await this.ui.confirm({
+        title: 'Importar dados?',
+        message: 'A importação substituirá os dados atuais. Deseja continuar?',
+        confirmText: 'Importar',
+        tone: 'dark',
+        icon: 'download',
+      });
+      if (!ok) return;
       await this.state.importData(json);
       this.message.set({ text: 'Dados importados com sucesso.', error: false });
     } catch (err) {
@@ -156,8 +175,15 @@ export class ConfiguracoesComponent {
     }
   }
 
-  protected restoreInitial(): void {
-    if (confirm('Restaurar valor da aposta, premiações, progressão e banca para a configuração inicial? Seus números e histórico serão mantidos.')) {
+  protected async restoreInitial(): Promise<void> {
+    const ok = await this.ui.confirm({
+      title: 'Restaurar configuração inicial?',
+      message: 'Valor da aposta, premiações, progressão e banca voltam para os valores iniciais. Seus números e histórico são mantidos.',
+      confirmText: 'Restaurar',
+      tone: 'dark',
+      icon: 'refresh',
+    });
+    if (ok) {
       this.state.restoreInitialConfiguration();
       this.message.set({ text: 'Configuração inicial restaurada.', error: false });
     }
@@ -169,8 +195,22 @@ export class ConfiguracoesComponent {
   }
 
   protected async resetAll(): Promise<void> {
-    if (!confirm('Essa ação apagará suas apostas, configurações e histórico localmente. Continuar?')) return;
-    if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return;
+    const first = await this.ui.confirm({
+      title: 'Apagar todos os dados?',
+      message: 'Essa ação apagará suas apostas, configurações e histórico localmente.',
+      confirmText: 'Continuar',
+      tone: 'danger',
+      icon: 'trash',
+    });
+    if (!first) return;
+    const second = await this.ui.confirm({
+      title: 'Tem certeza?',
+      message: 'Esta ação não pode ser desfeita. Considere exportar um backup antes.',
+      confirmText: 'Apagar tudo',
+      tone: 'danger',
+      icon: 'alert',
+    });
+    if (!second) return;
     await this.state.resetAll();
     this.router.navigate(['/boas-vindas']);
   }

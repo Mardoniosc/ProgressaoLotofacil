@@ -4,76 +4,106 @@ import { MAX_NUMBERS_PER_GAME, MIN_NUMBERS_PER_GAME } from '../../core/models/de
 import { BrlPipe, JogosPipe } from '../../shared/pipes/format.pipes';
 import { MoneyInputComponent } from '../../shared/components/money-input.component';
 import { DisclaimerComponent } from '../../shared/components/disclaimer.component';
+import { IconComponent } from '../../shared/components/icon.component';
 import { NumberGridComponent } from './number-grid.component';
+
+const PRESETS = [2.5, 3, 3.5];
+const STEP = 0.5;
 
 @Component({
   selector: 'app-aposta',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BrlPipe, JogosPipe,MoneyInputComponent, NumberGridComponent, DisclaimerComponent],
+  imports: [BrlPipe, JogosPipe, MoneyInputComponent, NumberGridComponent, DisclaimerComponent, IconComponent],
   template: `
-    <div class="page stack">
+    <div class="page">
       <header class="page-head">
-        <h1>Minha Aposta</h1>
-        <p>Valor da aposta e números do jogo atual. Todos os cálculos partem destes dados.</p>
+        <div>
+          <h1>Minha aposta</h1>
+          <p class="sub">Configure o jogo que deseja acompanhar.</p>
+        </div>
       </header>
 
-      <section class="card">
-        <div class="fields cols-2">
-          <div class="field">
-            <label for="betValue">Valor da aposta (por jogo)</label>
-            <app-money-input inputId="betValue" [value]="state.bet().betValue" (valueChange)="state.setBetValue($event)" />
-            <span class="hint">
-              Rodada {{ cur().round }}: {{ cur().games | jogos }} × {{ state.bet().betValue | brl }} =
-              <strong>{{ cur().investment | brl }}</strong>
-            </span>
+      <div class="layout">
+        <section class="card">
+          <label class="k" for="betValue">Valor atual</label>
+          <div class="big-stepper">
+            <button type="button" aria-label="Diminuir R$ 0,50" (click)="step(-1)"><app-icon name="minus" [size]="20" /></button>
+            <app-money-input size="lg" inputId="betValue" [value]="state.bet().betValue" (valueChange)="state.setBetValue($event)" />
+            <button type="button" aria-label="Aumentar R$ 0,50" (click)="step(1)"><app-icon name="plus" [size]="20" /></button>
           </div>
+          <div class="chips">
+            @for (p of presets; track p) {
+              <button type="button" class="chip" [class.active]="state.bet().betValue === p" (click)="state.setBetValue(p)">
+                @if (state.bet().betValue === p) { <app-icon name="check" [size]="16" [stroke]="2.6" /> }
+                {{ p | brl }}
+              </button>
+            }
+          </div>
+          <p class="caption hint">
+            Rodada {{ cur().round }}: {{ cur().games | jogos }} × {{ state.bet().betValue | brl }} =
+            <b class="strong">{{ cur().investment | brl }}</b>
+          </p>
+          <hr class="divider" />
           <div class="field">
             <label for="npg">Números por jogo</label>
-            <select id="npg" [value]="state.bet().numbersPerGame" (change)="setNumbersPerGame($any($event.target).value)">
+            <select id="npg" (change)="setNumbersPerGame($any($event.target).value)">
               @for (n of numbersPerGameOptions; track n) {
                 <option [value]="n" [selected]="n === state.bet().numbersPerGame">{{ n }} números{{ n === 15 ? ' (padrão)' : '' }}</option>
               }
             </select>
             <span class="hint">Apostas com mais números têm valor maior — ajuste o valor da aposta de acordo.</span>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="card">
-        <div class="card-head">
-          <div>
-            <h2>Minha aposta atual</h2>
-            <p>Toque nos números para selecionar ou remover.</p>
+        <section class="card">
+          <app-number-grid [(selected)]="draft" [max]="state.bet().numbersPerGame" />
+
+          @if (limitReached()) {
+            <div class="alert" style="margin-top: 16px">
+              <app-icon class="a-icon" name="info" [size]="20" />
+              <p style="margin: 0">Limite atingido. Desmarque um número para trocar.</p>
+            </div>
+          }
+          @if (dirty()) {
+            <div class="alert wn" style="margin-top: 12px">
+              <app-icon class="a-icon" name="alert" [size]="20" />
+              <p style="margin: 0">Alterações ainda não salvas.</p>
+            </div>
+          }
+          @if (savedMsg() && !dirty()) {
+            <div class="alert ok" style="margin-top: 12px" role="status">
+              <app-icon class="a-icon" name="check-circle" [size]="20" />
+              <p style="margin: 0">{{ savedMsg() }}</p>
+            </div>
+          }
+
+          <div class="btn-row" style="margin-top: 16px">
+            <button class="btn outline" type="button" (click)="clear()" [disabled]="!draft().length">Limpar</button>
+            <button class="btn" type="button" (click)="save()" [disabled]="!dirty()">Salvar aposta</button>
           </div>
-          @if (dirty()) { <span class="badge" style="background: var(--warning-soft); color: var(--warning)">Não salvo</span> }
-        </div>
-
-        <app-number-grid [(selected)]="draft" [max]="state.bet().numbersPerGame" />
-
-        <div class="selected-list" aria-live="polite">
-          <span class="label">Números selecionados</span>
-          <p class="nums">{{ formatted() || '—' }}</p>
-        </div>
-
-        <div class="row end">
-          <button class="btn" type="button" (click)="clear()" [disabled]="!draft().length">Limpar aposta</button>
-          <button class="btn primary" type="button" (click)="save()" [disabled]="!dirty()">Salvar aposta</button>
-        </div>
-        @if (savedMsg()) { <p class="small text-lucro" role="status" style="text-align: right; margin-top: 8px">{{ savedMsg() }}</p> }
-      </section>
+        </section>
+      </div>
 
       <app-disclaimer />
     </div>
   `,
   styles: `
-    .selected-list { margin: 18px 0 14px; padding: 12px; border-radius: var(--radius-sm); background: var(--surface-2); text-align: center; }
-    .label { font-size: .75rem; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
-    .nums { margin: 4px 0 0; font-weight: 700; font-size: 1.02rem; font-variant-numeric: tabular-nums; word-spacing: 2px; }
+    .layout { display: grid; gap: 16px; align-items: start; }
+    @media (min-width: 1024px) { .layout { grid-template-columns: 1fr 1.2fr; gap: 24px; } }
+    .k { display: block; font-size: 13px; font-weight: 600; color: var(--tx2); margin-bottom: 8px; }
+    .big-stepper { display: grid; grid-template-columns: 56px 1fr 56px; align-items: stretch; border: 1.5px solid var(--pri);
+      border-radius: var(--r-md); box-shadow: var(--ring); overflow: hidden; margin-bottom: 12px; background: var(--sf); }
+    .big-stepper button { border: 0; background: transparent; color: var(--tx2); cursor: pointer; display: grid; place-items: center; }
+    .big-stepper button:hover { background: var(--sf2); color: var(--pri); }
+    .big-stepper app-money-input { border-left: 1px solid var(--bd); border-right: 1px solid var(--bd); }
+    .big-stepper ::ng-deep .money { border: 0 !important; box-shadow: none !important; border-radius: 0; }
+    .hint { margin-top: 12px; }
   `,
 })
 export class ApostaComponent {
   protected readonly state = inject(AppStateService);
   protected readonly cur = this.state.currentRow;
+  protected readonly presets = PRESETS;
   protected readonly numbersPerGameOptions = Array.from(
     { length: MAX_NUMBERS_PER_GAME - MIN_NUMBERS_PER_GAME + 1 },
     (_, i) => i + MIN_NUMBERS_PER_GAME,
@@ -84,9 +114,11 @@ export class ApostaComponent {
   protected readonly dirty = computed(
     () => this.draft().join(',') !== this.state.bet().selectedNumbers.join(','),
   );
-  protected readonly formatted = computed(() =>
-    this.draft().map((n) => n.toString().padStart(2, '0')).join(' · '),
-  );
+  protected readonly limitReached = computed(() => this.draft().length >= this.state.bet().numbersPerGame);
+
+  protected step(dir: 1 | -1): void {
+    this.state.setBetValue(Math.max(0, Math.round((this.state.bet().betValue + dir * STEP) * 100) / 100));
+  }
 
   protected setNumbersPerGame(value: string): void {
     const n = Number(value);

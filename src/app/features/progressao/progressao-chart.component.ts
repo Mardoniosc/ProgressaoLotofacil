@@ -1,32 +1,44 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { AppStateService } from '../../core/services/app-state.service';
-import { PrizeTier, ProgressionRow } from '../../core/models/models';
+import { PrizeTier, ProgressionRow, TIER_HITS } from '../../core/models/models';
 import { ChartComponent, ChartSeries } from '../../shared/components/chart.component';
+import { AmountComponent } from '../../shared/components/amount.component';
 import { TierSelectorComponent } from '../../shared/components/tier-selector.component';
 
 /** Os três gráficos da progressão. */
 @Component({
   selector: 'app-progressao-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChartComponent, TierSelectorComponent],
+  imports: [ChartComponent, AmountComponent, TierSelectorComponent],
   template: `
-    <div class="two-col">
+    <div class="grid-2">
       <section class="card">
-        <div class="card-head"><div><h2>Investimento por rodada</h2><p>Valor investido em cada rodada</p></div></div>
-        <app-chart [labels]="labels()" [series]="investmentSeries()" ariaLabel="Investimento por rodada" />
+        <div class="card-head"><h3>Investimento por rodada</h3><span class="meta">barras</span></div>
+        <app-chart [labels]="labels()" [series]="investmentSeries()" [highlight]="highlight()" ariaLabel="Investimento por rodada" />
       </section>
       <section class="card">
-        <div class="card-head"><div><h2>Investimento acumulado</h2><p>Exposição total ao longo das rodadas</p></div></div>
-        <app-chart [labels]="labels()" [series]="accumulatedSeries()" ariaLabel="Investimento acumulado" />
+        <div class="card-head">
+          <h3>Investimento acumulado</h3>
+          <span class="total"><app-amount [value]="total()" /> <small>em {{ rows().length }} rodadas</small></span>
+        </div>
+        <app-chart [labels]="labels()" [series]="accumulatedSeries()" [highlight]="highlight()" ariaLabel="Investimento acumulado" />
       </section>
     </div>
-    <section class="card" style="margin-top: 16px">
+    <section class="card" style="margin-top: var(--gap, 16px)">
       <div class="card-head">
-        <div><h2>Investimento × prêmio simulado</h2><p>{{ state.tierLabel(tier()) }} · {{ basisText() }}</p></div>
-        <app-tier-selector [compact]="true" [value]="tier()" (valueChange)="localTier.set($event)" />
+        <h3>Investimento × prêmio</h3>
+        <app-tier-selector [showPrize]="false" [value]="tier()" (valueChange)="localTier.set($event)" />
       </div>
-      <app-chart [labels]="labels()" [series]="comparisonSeries()" ariaLabel="Investimento versus prêmio simulado" />
+      <app-chart [labels]="labels()" [series]="comparisonSeries()" [highlight]="highlight()" [chartHeight]="240"
+        ariaLabel="Investimento versus prêmio simulado" />
+      <p class="caption note">Área vermelha: zona onde o {{ basisWord() }} ultrapassa o prêmio simulado da faixa selecionada ({{ state.tierLabel(tier()) }}).</p>
     </section>
+  `,
+  styles: `
+    .total { font-size: 20px; }
+    .total small { font-size: 12px; color: var(--tx2); font-weight: 600; }
+    .note { margin-top: 10px; font-weight: 500; color: var(--tx2); }
+    @media (min-width: 1024px) { :host { --gap: 24px; } }
   `,
 })
 export class ProgressaoChartComponent {
@@ -35,27 +47,25 @@ export class ProgressaoChartComponent {
 
   protected readonly localTier = signal<PrizeTier | null>(null);
   protected readonly tier = computed(() => this.localTier() ?? this.state.selectedTier());
-  protected readonly labels = computed(() => this.rows().map((r) => String(r.round)));
-  protected readonly basisText = computed(() =>
-    this.state.progression().resultBasis === 'accumulated' ? 'comparado ao investimento acumulado' : 'comparado ao investimento da rodada',
-  );
+  protected readonly labels = computed(() => this.rows().map((r) => `R${r.round}`));
+  protected readonly highlight = computed(() => this.state.progression().currentRound - 1);
+  protected readonly total = computed(() => this.rows().at(-1)?.accumulated ?? 0);
+  private readonly accumulated = computed(() => this.state.progression().resultBasis === 'accumulated');
+  protected readonly basisWord = computed(() => (this.accumulated() ? 'acumulado' : 'investimento da rodada'));
 
   protected readonly investmentSeries = computed<ChartSeries[]>(() => [
-    { name: 'Investimento', values: this.rows().map((r) => r.investment), color: '--series-1', type: 'bar' },
+    { name: 'Investimento', values: this.rows().map((r) => r.investment), color: '--pri', type: 'bar' },
   ]);
   protected readonly accumulatedSeries = computed<ChartSeries[]>(() => [
-    { name: 'Acumulado', values: this.rows().map((r) => r.accumulated), color: '--series-1', type: 'line' },
+    { name: 'Acumulado', values: this.rows().map((r) => r.accumulated), color: '--pri', type: 'area' },
   ]);
-  protected readonly comparisonSeries = computed<ChartSeries[]>(() => {
-    const accumulated = this.state.progression().resultBasis === 'accumulated';
-    return [
-      {
-        name: accumulated ? 'Investimento acumulado' : 'Investimento',
-        values: this.rows().map((r) => (accumulated ? r.accumulated : r.investment)),
-        color: '--series-1',
-        type: 'bar',
-      },
-      { name: 'Prêmio simulado', values: this.rows().map((r) => r.prizes[this.tier()]), color: '--series-2', type: 'bar' },
-    ];
-  });
+  protected readonly comparisonSeries = computed<ChartSeries[]>(() => [
+    {
+      name: this.accumulated() ? 'Acumulado' : 'Investimento',
+      values: this.rows().map((r) => (this.accumulated() ? r.accumulated : r.investment)),
+      color: '--pri',
+      type: 'area',
+    },
+    { name: `Prêmio ${TIER_HITS[this.tier()]}`, values: this.rows().map((r) => r.prizes[this.tier()]), color: '--sec', type: 'dashed' },
+  ]);
 }

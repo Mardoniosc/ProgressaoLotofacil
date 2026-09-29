@@ -3,70 +3,58 @@
 } @else {
   <div class="shell">
     <aside class="sidebar" aria-label="Navegação principal">
-      <div class="brand">
-        <span class="logo" aria-hidden="true"><img src="icons/icon-96x96.png" alt="" width="36" height="36" /></span>
-        <div>
-          <strong>{{ state.preferences().appTitle }}</strong>
-          <small>Simulação e acompanhamento</small>
-        </div>
-      </div>
-      <nav>
-        @for (item of nav; track item.path) {
+      <a class="brand" routerLink="/dashboard">
+        <app-logo [size]="36" />
+        <span class="brand-name"><span>{{ titleParts()[0] }}</span><span class="pri-tx">{{ titleParts()[1] }}</span></span>
+      </a>
+      <nav class="side-nav">
+        @for (item of sideNav; track item.path) {
           <a [routerLink]="item.path" routerLinkActive="active" class="side-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="item.icon" /></svg>
-            {{ item.label }}
+            <app-icon [name]="item.icon" [size]="19" /> {{ item.label }}
           </a>
         }
+        <hr />
+        <a routerLink="/configuracoes" routerLinkActive="active" class="side-link">
+          <app-icon name="sliders" [size]="19" /> Configurações
+        </a>
+        <button type="button" class="side-link" (click)="ui.infoOpen.set(true)">
+          <app-icon name="info" [size]="19" /> Entenda os números
+        </button>
       </nav>
       <div class="side-foot">
         @if (pwa.canInstall()) {
-          <button class="btn primary block sm" type="button" (click)="pwa.install()">Instalar aplicativo</button>
+          <button class="btn sm block" type="button" (click)="pwa.install()"><app-icon name="install" [size]="18" /> Instalar aplicativo</button>
         }
-        <button class="btn ghost block sm" type="button" (click)="theme.toggle()">
-          {{ theme.effective() === 'dark' ? '☀️ Modo claro' : '🌙 Modo escuro' }}
-        </button>
+        <div class="side-resp">
+          <strong>Use com responsabilidade</strong>
+          Utilize apenas valores compatíveis com seu orçamento.
+        </div>
       </div>
     </aside>
 
     <div class="main">
-      <header class="topbar">
-        <div class="brand">
-          <span class="logo" aria-hidden="true"><img src="icons/icon-96x96.png" alt="" width="30" height="30" /></span>
-          <strong>{{ state.preferences().appTitle }}</strong>
-        </div>
-        <div class="row">
-          @if (pwa.canInstall()) {
-            <button class="btn sm primary" type="button" (click)="pwa.install()">Instalar</button>
-          }
-          <button class="icon-btn" type="button" (click)="theme.toggle()"
-            [attr.aria-label]="theme.effective() === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'">
-            {{ theme.effective() === 'dark' ? '☀️' : '🌙' }}
-          </button>
-        </div>
-      </header>
-
       @if (state.storageError(); as err) {
-        <div class="alert danger storage-alert" role="alert">{{ err }}</div>
+        <div class="alert er top-alert" role="alert"><app-icon class="a-icon" name="x-circle" [size]="20" /><div><div class="a-title">Erro</div><p>{{ err }}</p></div></div>
       }
       @if (pwa.updateAvailable()) {
-        <div class="alert storage-alert row between" role="status">
-          <span>Nova versão disponível.</span>
-          <button class="btn sm primary" type="button" (click)="pwa.reload()">Atualizar</button>
+        <div class="alert top-alert" role="status">
+          <app-icon class="a-icon" name="refresh" [size]="20" />
+          <div class="row between"><span><b>Nova versão disponível.</b></span><button class="btn xs" type="button" (click)="pwa.reload()">Atualizar</button></div>
         </div>
       }
-
       <main>
         <router-outlet />
       </main>
     </div>
 
     <nav class="bottom-nav" aria-label="Navegação">
-      @for (item of mobileNav; track item.path) {
+      @for (item of bottomNav; track item.path) {
         <a [routerLink]="item.path" routerLinkActive="active" class="bottom-link">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="item.icon" /></svg>
+          <span class="pill"><app-icon [name]="item.icon" [size]="21" /></span>
           <span>{{ item.short }}</span>
         </a>
       }
     </nav>
   </div>
 }
+<app-global-sheets />

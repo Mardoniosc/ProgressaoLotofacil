@@ -2,7 +2,7 @@ import { DOCUMENT, Injectable, computed, effect, inject, signal } from '@angular
 import { ThemePreference } from '../models/models';
 import { AppStateService } from './app-state.service';
 
-const THEME_COLORS = { light: '#6d28d9', dark: '#1a1530' };
+const THEME_COLORS = { light: '#f3f5f8', dark: '#0a101c' };
 
 /** Aplica o tema (claro/escuro/sistema) salvo nas preferências. */
 @Injectable({ providedIn: 'root' })

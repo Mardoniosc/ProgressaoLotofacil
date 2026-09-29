@@ -1,13 +1,14 @@
-// Gera os ícones PNG do PWA (sem dependências): fundo violeta com um volante 5×5.
+// Gera os ícones PNG do PWA (sem dependências): fundo azul com o volante 3×3 do logotipo.
 // Uso: node scripts/generate-icons.mjs
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-const SELECTED = new Set([1, 3, 4, 6, 7, 9, 11, 13, 15, 17, 18, 20, 21, 23, 25]);
-const BG_TOP = [124, 58, 237];
-const BG_BOTTOM = [91, 33, 182];
+const GRID = 3;
+const SELECTED = new Set([1, 3, 5, 6, 7, 8]);
+const BG_TOP = [44, 98, 226];
+const BG_BOTTOM = [32, 78, 196];
 const WHITE = [255, 255, 255];
-const DIM = [255, 255, 255, 0.28];
+const DIM = [255, 255, 255, 0.45];
 
 function crc32(buf) {
   let c, crc = 0xffffffff;
@@ -69,13 +70,13 @@ function roundedRect(r) {
 function render(size, maskable) {
   const buf = Buffer.alloc(size * size * 4);
   const shape = maskable ? () => true : roundedRect(0.22);
-  const gridScale = maskable ? 0.56 : 0.7;
+  const gridScale = maskable ? 0.5 : 0.62;
   const origin = (1 - gridScale) / 2;
-  const cell = gridScale / 5;
-  const radius = cell * 0.36;
+  const cell = gridScale / GRID;
+  const radius = cell * 0.27;
   const balls = [];
-  for (let i = 0; i < 25; i++) {
-    balls.push({ cx: origin + cell * (i % 5 + 0.5), cy: origin + cell * (Math.floor(i / 5) + 0.5), on: SELECTED.has(i + 1) });
+  for (let i = 0; i < GRID * GRID; i++) {
+    balls.push({ cx: origin + cell * (i % GRID + 0.5), cy: origin + cell * (Math.floor(i / GRID) + 0.5), on: SELECTED.has(i + 1) });
   }
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
