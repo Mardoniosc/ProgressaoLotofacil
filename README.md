@@ -1,4 +1,4 @@
-# Lotofácil Progressão 
+# Lotofácil Progressão
 
 PWA em Angular 22 para **simulação matemática e acompanhamento** de apostas da Lotofácil:
 investimento, progressão de jogos, prêmios simulados por faixa, lucro/prejuízo, ROI, ponto de
